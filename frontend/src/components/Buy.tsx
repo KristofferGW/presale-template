@@ -2,6 +2,9 @@ import { useState } from 'react';
 import presaleAbi from '../abis/presale.json';
 import { useAccount, useContractRead, usePrepareContractWrite, useContractWrite } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
+import Input from './Input';
+import Button from './Button';
+import Modal from './Modal';
 
 const PRESALE_ADDRESS = import.meta.env.VITE_PRESALE_ADDRESS as string | undefined;
 
@@ -30,7 +33,11 @@ export default function Buy() {
 
   // prepare write (buy) with value
   const { config } = usePrepareContractWrite({ address: PRESALE_ADDRESS as any, abi: presaleAbi as any, functionName: 'buy', value: ethAmount ? parseEther(ethAmount) : 0n } as any);
-  const { write, isLoading: isBuying } = useContractWrite(config);
+  const { write, isLoading: isBuying, isSuccess, data: txData } = useContractWrite(config);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // show modal when buy succeeds
+  if (isSuccess && !confirmOpen) setConfirmOpen(true);
 
   const progress = (() => {
     try {
@@ -56,29 +63,32 @@ export default function Buy() {
   })();
 
   return (
-    <div className="buy-card" style={{ border: '1px solid #ddd', padding: 16, borderRadius: 8, maxWidth: 480 }}>
-      <h3>Presale</h3>
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ height: 10, background: '#eee', borderRadius: 4, overflow: 'hidden' }}>
-          <div style={{ width: `${progress}%`, height: '100%', background: '#60a5fa' }} />
+    <div className="buy-card border p-4 rounded-md max-w-md">
+      <h3 className="text-lg font-semibold">Presale</h3>
+      <div className="mb-3">
+        <div className="h-2 bg-slate-200 rounded overflow-hidden">
+          <div style={{ width: `${progress}%` }} className="h-full bg-blue-400" />
         </div>
-        <div style={{ fontSize: 12, marginTop: 6 }}>{progress}% raised — {weiToEth(totalRaised as any)} / {weiToEth(hardCap as any)} ETH</div>
+        <div className="text-xs mt-2">{progress}% raised — {weiToEth(totalRaised as any)} / {weiToEth(hardCap as any)} ETH</div>
       </div>
 
-      <div style={{ marginBottom: 8 }}>Price: {price}</div>
+      <div className="mb-3">Price: {price}</div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-        <input value={ethAmount} onChange={(e) => setEthAmount(e.target.value)} />
-        <button onClick={() => write?.()} disabled={!isConnected || !write || isBuying || !active}>
+      <div className="flex gap-2 mb-3">
+        <Input value={ethAmount} onChange={(e: any) => setEthAmount(e.target.value)} />
+        <Button variant="primary" onClick={() => write?.()} disabled={!isConnected || !write || isBuying || !active}>
           {isBuying ? 'Buying...' : 'Buy'}
-        </button>
+        </Button>
       </div>
 
-      <div style={{ fontSize: 12 }}>
-        Your contribution: {weiToEth(contribution as any)} ETH
-      </div>
+      <div className="text-xs">Your contribution: {weiToEth(contribution as any)} ETH</div>
 
-      {!active && <div style={{ color: 'orange', marginTop: 8 }}>Sale is not active</div>}
+      {!active && <div className="text-orange-600 mt-2">Sale is not active</div>}
+
+      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Buy confirmed">
+        <div>Purchase transaction submitted.</div>
+        <div className="mt-2 text-xs">Tx: {txData ? String((txData as any).hash ?? (txData as any).request?.hash) : '—'}</div>
+      </Modal>
     </div>
   );
 }
