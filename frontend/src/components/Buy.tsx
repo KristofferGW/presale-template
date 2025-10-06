@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import presaleAbi from '../abis/presale.json';
-import { useAccount, useContractRead, usePrepareContractWrite, useContractWrite } from 'wagmi';
+import { useAccount, useContractRead, useWriteContract } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import Input from './Input';
 import Button from './Button';
@@ -31,9 +31,12 @@ export default function Buy() {
   const { data: contribution } = useContractRead({ address: PRESALE_ADDRESS as any, abi: presaleAbi as any, functionName: 'contributions', args: [address ?? '0x0000000000000000000000000000000000000000'] });
   const { data: active } = useContractRead({ address: PRESALE_ADDRESS as any, abi: presaleAbi as any, functionName: 'isActive' });
 
-  // prepare write (buy) with value
-  const { config } = usePrepareContractWrite({ address: PRESALE_ADDRESS as any, abi: presaleAbi as any, functionName: 'buy', value: ethAmount ? parseEther(ethAmount) : 0n } as any);
-  const { write, isLoading: isBuying, isSuccess, data: txData } = useContractWrite(config);
+  const {
+    data: hash,
+    writeContract,
+    isPending: isBuying,
+    isSuccess,
+  } = useWriteContract();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // show modal when buy succeeds
@@ -76,7 +79,18 @@ export default function Buy() {
 
       <div className="flex gap-2 mb-3">
         <Input value={ethAmount} onChange={(e: any) => setEthAmount(e.target.value)} />
-        <Button variant="primary" onClick={() => write?.()} disabled={!isConnected || !write || isBuying || !active}>
+        <Button
+          variant="primary"
+          onClick={() =>
+            writeContract?.({
+              address: PRESALE_ADDRESS as any,
+              abi: presaleAbi as any,
+              functionName: 'buy',
+              value: ethAmount ? parseEther(ethAmount) : 0n,
+            })
+          }
+          disabled={!isConnected || !writeContract || isBuying || !active}
+        >
           {isBuying ? 'Buying...' : 'Buy'}
         </Button>
       </div>
@@ -87,7 +101,7 @@ export default function Buy() {
 
       <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Buy confirmed">
         <div>Purchase transaction submitted.</div>
-        <div className="mt-2 text-xs">Tx: {txData ? String((txData as any).hash ?? (txData as any).request?.hash) : '—'}</div>
+        <div className="mt-2 text-xs">Tx: {hash ?? '—'}</div>
       </Modal>
     </div>
   );

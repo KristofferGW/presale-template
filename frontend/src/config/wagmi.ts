@@ -1,17 +1,9 @@
-import { createConfig, configureChains } from 'wagmi';
+import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { mainnet } from 'viem/chains';
-import { publicProvider } from 'wagmi/providers/public';
-import { InjectedConnector } from 'wagmi/connectors/injected';
 
-// Configure chains and providers
-export const { chains, publicClient, webSocketPublicClient } = configureChains([
-  mainnet,
-], [publicProvider()]);
-
-const connectors = [new InjectedConnector({ options: {} })];
-
-export const wagmiConfig = createConfig({
-  publicClient,
-  webSocketPublicClient,
-  connectors,
+export const config = getDefaultConfig({
+  appName: 'Presale Template',
+  projectId: 'YOUR_PROJECT_ID',
+  chains: [mainnet],
+  ssr: false,
 });
